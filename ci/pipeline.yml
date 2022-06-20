@@ -7,7 +7,7 @@ resources:
   source:
     start: 3:00
     stop: 4:30
-    location: America/Los_Angeles
+    location: Europe/Berlin
     interval: 168h
 
 # Concourse Tasks
