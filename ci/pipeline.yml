@@ -29,16 +29,19 @@ resources:
   type: git
   icon: github
   source:
-    uri: git@github.com:cloudfoundry/cf-smoke-tests-release.git
-    branch: main
-    private_key: ((cf_smoke_tests_release_readwrite_deploy_key.private_key))
+    uri: https://github.com/sap-contributions/cf-smoke-tests-release.git
+    branch: go-auto-upgrades
+    username: ((pat))
+    password: x-oauth-basic
 
 - name: cf-smoke-tests-release-trigger
   type: git
   icon: github
   source:
-    uri: git@github.com:cloudfoundry/cf-smoke-tests-release.git
-    private_key: ((cf_smoke_tests_release_readwrite_deploy_key.private_key))
+    uri: https://github.com/sap-contributions/cf-smoke-tests-release.git
+    branch: go-auto-upgrades
+    username: ((pat))
+    password: x-oauth-basic
     ignore_paths:
     - releases/**
     - .final_builds/**
@@ -49,9 +52,10 @@ resources:
   type: git
   icon: github
   source:
-    uri: git@github.com:cloudfoundry/cf-smoke-tests.git
-    branch: main
-    private_key: ((cf_smoke_tests_readwrite_deploy_key.private_key))
+    uri: https://github.com/sap-contributions/cf-smoke-tests.git
+    branch: go-auto-upgrades
+    username: ((pat))
+    password: x-oauth-basic
 
 - name: cf-test-helpers
   type: git
@@ -60,38 +64,41 @@ resources:
     uri: https://github.com/cloudfoundry/cf-test-helpers
     branch: main
 
-# ENV
 - name: relint-envs
-  type: git
-  icon: github
+  type: s3
   source:
-    uri: git@github.com:cloudfoundry/relint-envs.git
-    private_key: ((hagrid_env_readwrite_deploy_key.private_key))
+    bucket: cf-load-test-pipeline
+    region_name: eu-central-1
+    versioned_file: dev/bbl-state.tar.gz
+    access_key_id: ((aws_access_key_id))
+    secret_access_key: ((aws_secret_access_key))
 
 - name: cats-pool
   type: pool
   icon: pool
   source:
-    uri: git@github.com:cloudfoundry/relint-ci-pools
-    branch: main
+    uri: https://github.com/sap-contributions/relint-ci-pools.git
+    branch: go-auto-upgrades
     pool: cats
-    private_key: ((relint_ci_pools_readwrite_deploy_key.private_key))
+    username: ((pat))
+    password: x-oauth-basic
 
 # Semantic Version
 - name: cf-smoke-tests-version
   type: semver
   source:
     driver: git
-    uri: git@github.com:cloudfoundry/cf-relint-ci-semver.git
-    branch: main
-    private_key: ((cf_relint_ci_semver_readwrite_deploy_key.private_key))
+    uri: https://github.com/sap-contributions/cf-relint-ci-semver.git
+    branch: go-auto-upgrades
+    username: ((pat))
+    password: x-oauth-basic
     git_user: "CF MEGA BOT <cf-mega@pivotal.io>"
     file: cf-smoke-tests-version
 
 - name: windows2019-stemcell
   type: bosh-io-stemcell
   source:
-    name: bosh-google-kvm-windows2019-go_agent
+    name: bosh-aws-xen-hvm-windows2019-go_agent
 
 jobs:
 - name: bump-cf-test-helpers
@@ -170,6 +177,8 @@ jobs:
       passed:
       - cats-acquire-pool
     - get: relint-envs
+      params:
+        unpack: true
     - get: windows2019-stemcell
 
   - task: upload-windows2019-stemcell
@@ -178,15 +187,15 @@ jobs:
       bbl-state: relint-envs
       stemcell: windows2019-stemcell
     params:
-      BBL_STATE_DIR: environments/test/cats/bbl-state
+      BBL_STATE_DIR: bbl-state
 
   - task: deploy-smoke-tests-errand
     file: runtime-ci/tasks/bosh-deploy-smokes/task.yml
     input_mapping:
       bbl-state: relint-envs
     params:
-      BBL_STATE_DIR: environments/test/cats/bbl-state
-      SYSTEM_DOMAIN: cats.cf-app.com
+      BBL_STATE_DIR: bbl-state
+      SYSTEM_DOMAIN: cf.gcp-dev01.gcp.bndl.sapcloud.io
       CREDHUB_ENV_NAME: bosh-cats
 
 - name: run-smokes-errand
@@ -207,13 +216,15 @@ jobs:
       passed:
       - deploy-updated-smokes
     - get: relint-envs
+      params:
+        unpack: true
 
   - task: run-smokes
     file: cf-deployment-concourse-tasks/run-errand/task.yml
     input_mapping:
       bbl-state: relint-envs
     params:
-      BBL_STATE_DIR: environments/test/cats/bbl-state
+      BBL_STATE_DIR: bbl-state
       DEPLOYMENT_NAME: cf-smoke-tests
       ERRAND_NAME: smoke_tests
 
@@ -222,7 +233,7 @@ jobs:
     input_mapping:
       bbl-state: relint-envs
     params:
-      BBL_STATE_DIR: environments/test/cats/bbl-state
+      BBL_STATE_DIR: bbl-state
       DEPLOYMENT_NAME: cf-smoke-tests
       ERRAND_NAME: smoke_tests_windows
 
@@ -244,13 +255,15 @@ jobs:
       passed:
       - run-smokes-errand
     - get: relint-envs
+      params:
+        unpack: true
 
   - task: delete-smoke-tests-deployment
     file: cf-deployment-concourse-tasks/bosh-delete-deployment/task.yml
     input_mapping:
       bbl-state: relint-envs
     params:
-      BBL_STATE_DIR: environments/test/cats/bbl-state
+      BBL_STATE_DIR: bbl-state
       DEPLOYMENT_NAME: cf-smoke-tests
 
   - put: cats-pool
