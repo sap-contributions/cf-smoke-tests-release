@@ -1,4 +1,12 @@
 ---
+release_lock: &release_lock_if_not_success
+  on_failure: &release_lock
+    put: cats-pool
+    params:
+      release: cats-pool
+  on_error: *release_lock
+  on_abort: *release_lock
+
 resources:
 # Weekly Trigger
 - name: weekly-trigger
@@ -162,6 +170,7 @@ jobs:
   serial_groups:
   - smoke_tests
   public: true
+  <<: *release_lock_if_not_success
   plan:
   - in_parallel:
     - get: cats-pool
@@ -202,6 +211,7 @@ jobs:
   serial_groups:
   - smoke_tests
   public: true
+  <<: *release_lock_if_not_success
   plan:
   - in_parallel:
     - get: cats-pool
@@ -241,6 +251,7 @@ jobs:
   serial_groups:
   - smoke_tests
   public: true
+  <<: *release_lock_if_not_success
   plan:
   - in_parallel:
     - get: cats-pool
@@ -273,6 +284,7 @@ jobs:
 - name: create-final-release
   serial: true
   public: true
+  <<: *release_lock_if_not_success
   plan:
   - in_parallel:
     - get: cf-smoke-tests-release-trigger
