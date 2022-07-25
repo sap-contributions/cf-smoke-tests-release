@@ -115,6 +115,8 @@ resources:
 
 jobs:
 - name: bump-deps
+  serial: true
+  public: true
   plan:
   - in_parallel:
     - get: cf-smoke-tests
@@ -136,6 +138,8 @@ jobs:
       rebase: true
 
 - name: bump-golang-packages
+  serial: true
+  public: true
   plan:
   - in_parallel:
     - get: cf-smoke-tests-release
@@ -155,7 +159,7 @@ jobs:
       run:
         path: sh
         args:
-        - -exc
+        - -ec
         - |
           cd cf-smoke-tests
           go mod edit -json | jq --raw-output .Go > ../version/version
@@ -178,6 +182,62 @@ jobs:
           options:
             access_key_id: ((aws_access_key_id))
             secret_access_key: ((aws_secret_access_key))
+  - put: cf-smoke-tests-release
+    params:
+      repository: cf-smoke-tests-release-updated
+      rebase: true
+
+- name: bump-blobs
+  serial: true
+  public: true
+  plan:
+  - get: cf-smoke-tests-release
+    trigger: true
+    passed: [bump-golang-packages]
+  - task: bump-blobs
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: cloudfoundry/bosh-cli
+      inputs:
+      - name: cf-smoke-tests-release
+      params:
+        GIT_USER_NAME: CI Bot
+        GIT_USER_EMAIL: bots@cloudfoundry.org
+      run:
+        path: sh
+        args:
+        - -ec
+        - |
+          cd cf-smoke-tests-release
+          cat > config/private.yml <<EOF
+          ---
+          blobstore:
+            provider: s3
+            options:
+              access_key_id: ((aws_access_key_id))
+              secret_access_key: ((aws_secret_access_key))
+          EOF
+          cf_cli_current="$(grep -E 'cf8-cli_.*winx64' config/blobs.yml |  sed 's/.$//')"
+          wget 'https://packages.cloudfoundry.org/stable?release=windows64-exe&version=v8&source=github-rel' --content-disposition
+          cf_cli_new="$(ls cf8-cli_*winx64.zip)"
+          if [[ "$cf_cli_current" != "$cf_cli_new" ]]; then
+            bosh remove-blob "$cf_cli_current"
+            bosh add-blob "$cf_cli" "$cf_cli"
+            bosh upload-blobs
+          fi
+          if [[ $(git -C "$repo" status --porcelain) ]]; then
+            git status
+            git config --global user.email "$GIT_USER_EMAIL"
+            git config --global user.name "$GIT_USER_NAME"
+            git add .
+            git commit -m "Update runc to ${runc_version_go_mod}"
+          fi
+          cp -r cf-smoke-tests-release/. cf-smoke-tests-release-updated/
+      outputs:
+      - name: cf-smoke-tests-release-updated
   - put: cf-smoke-tests-release
     params:
       repository: cf-smoke-tests-release-updated
