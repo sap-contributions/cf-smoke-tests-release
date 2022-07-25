@@ -176,8 +176,8 @@ jobs:
         blobstore:
           provider: s3
           options:
-            access_key_id: ((cf_release_blobs_buckets_access_key_id))
-            secret_access_key: ((cf_release_blobs_buckets_secrect_access_key))
+            access_key_id: ((aws_access_key_id))
+            secret_access_key: ((aws_secret_access_key))
   - put: cf-smoke-tests-release
     params:
       repository: cf-smoke-tests-release-updated
@@ -377,8 +377,8 @@ jobs:
       release-repo: cf-smoke-tests-release
       semantic-version: cf-smoke-tests-version
     params:
-      BLOBS_BUCKET_ACCESS_KEY_ID: ((cf_release_blobs_buckets_access_key_id))
-      BLOBS_BUCKET_SECRET_KEY: ((cf_release_blobs_buckets_secrect_access_key))
+      BLOBS_BUCKET_ACCESS_KEY_ID: ((aws_access_key_id))
+      BLOBS_BUCKET_SECRET_KEY: ((aws_secret_access_key))
 
   - put: cf-smoke-tests-release
     params:
