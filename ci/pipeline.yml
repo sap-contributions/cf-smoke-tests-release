@@ -108,7 +108,32 @@ resources:
   source:
     name: bosh-aws-xen-hvm-windows2019-go_agent
 
+- name: golang-release
+  type: git
+  source:
+    uri: https://github.com/bosh-packages/golang-release.git
+
 jobs:
+- name: bump-deps
+  plan:
+  - in_parallel:
+    - get: cf-smoke-tests
+    - get: golang-release
+    - get: weekly-trigger
+      trigger: true
+  - task: bump-deps
+    file: golang-release/ci/tasks/shared/bump-deps.yml
+    input_mapping:
+      input_repo: cf-smoke-tests
+    output_mapping:
+      output_repo: cf-smoke-tests-updated
+    params:
+      SOURCE_PATH: .
+  - put: cf-smoke-tests
+    params:
+      repository: cf-smoke-tests-updated
+      rebase: true
+
 - name: bump-cf-test-helpers
   public: true
   plan:
