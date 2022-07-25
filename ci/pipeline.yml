@@ -119,6 +119,7 @@ jobs:
   - in_parallel:
     - get: cf-smoke-tests
     - get: golang-release
+      trigger: true
     - get: weekly-trigger
       trigger: true
   - task: bump-deps
@@ -132,6 +133,54 @@ jobs:
   - put: cf-smoke-tests
     params:
       repository: cf-smoke-tests-updated
+      rebase: true
+
+- name: bump-golang-packages
+  plan:
+  - in_parallel:
+    - get: cf-smoke-tests-release
+    - get: cf-smoke-tests
+    - get: golang-release
+      passed: [bump-deps]
+      trigger: true
+  - task: get-target-go-version
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: bosh/golang-release
+      inputs:
+      - name: cf-smoke-tests
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          cd cf-smoke-tests
+          go mod edit -json | jq --raw-output .Go > ../version/version
+      outputs:
+        - name: version
+  - load_var: go_version
+    file: version/version
+  - task: bump-golang-packages
+    file: golang-release/ci/tasks/shared/bump-golang-package.yml
+    input_mapping:
+      input_repo: cf-smoke-tests-release
+    output_mapping:
+      output_repo: cf-smoke-tests-release-updated
+    params:
+      PACKAGES: [golang-((.:go_version))-linux, golang-((.:go_version))-windows]
+      PRIVATE_YML: |
+        ---
+        blobstore:
+          provider: s3
+          options:
+            access_key_id: ((cf_release_blobs_buckets_access_key_id))
+            secret_access_key: ((cf_release_blobs_buckets_secrect_access_key))
+  - put: cf-smoke-tests-release
+    params:
+      repository: cf-smoke-tests-release-updated
       rebase: true
 
 - name: bump-cf-test-helpers
