@@ -207,12 +207,12 @@ jobs:
         GIT_USER_NAME: CI Bot
         GIT_USER_EMAIL: bots@cloudfoundry.org
       run:
-        path: sh
+        path: /bin/bash
         args:
         - -ec
         - |
-          cd cf-smoke-tests-release
-          cat > config/private.yml <<EOF
+          cf_smoke_tests_release_dir="$(pwd)/cf-smoke-tests-release"
+          cat > "${cf_smoke_tests_release_dir}/config/private.yml" <<EOF
           ---
           blobstore:
             provider: s3
@@ -220,22 +220,22 @@ jobs:
               access_key_id: ((aws_access_key_id))
               secret_access_key: ((aws_secret_access_key))
           EOF
-          cf_cli_current="$(grep -E 'cf8-cli_.*winx64' config/blobs.yml |  sed 's/.$//')"
+          cf_cli_current="$(grep -E 'cf8-cli_.*winx64' "${cf_smoke_tests_release_dir}/config/blobs.yml" |  sed 's/.$//')"
           wget 'https://packages.cloudfoundry.org/stable?release=windows64-exe&version=v8&source=github-rel' --content-disposition
           cf_cli_new="$(ls cf8-cli_*winx64.zip)"
           if [[ "$cf_cli_current" != "$cf_cli_new" ]]; then
-            bosh remove-blob "$cf_cli_current"
-            bosh add-blob "$cf_cli" "$cf_cli"
-            bosh upload-blobs
+            bosh remove-blob "$cf_cli_current" --dir "$cf_smoke_tests_release_dir"
+            bosh add-blob "$cf_cli_new" "$cf_cli_new" --dir "$cf_smoke_tests_release_dir"
+            bosh upload-blobs --dir "$cf_smoke_tests_release_dir"
           fi
-          if [[ $(git -C "$repo" status --porcelain) ]]; then
-            git status
+          if [[ $(git -C "$cf_smoke_tests_release_dir" status --porcelain) ]]; then
+            git -C "$cf_smoke_tests_release_dir" status
             git config --global user.email "$GIT_USER_EMAIL"
             git config --global user.name "$GIT_USER_NAME"
-            git add .
-            git commit -m "Update runc to ${runc_version_go_mod}"
+            git -C "$cf_smoke_tests_release_dir" add "${cf_smoke_tests_release_dir}/config/blobs.yml"
+            git -C "$cf_smoke_tests_release_dir" commit -m "Update cf cli to ${cf_cli_new}"
           fi
-          cp -r cf-smoke-tests-release/. cf-smoke-tests-release-updated/
+          cp -r "${cf_smoke_tests_release_dir}/." ./cf-smoke-tests-release-updated/
       outputs:
       - name: cf-smoke-tests-release-updated
   - put: cf-smoke-tests-release
