@@ -204,7 +204,7 @@ jobs:
       bbl-state: relint-envs
     params:
       BBL_STATE_DIR: bbl-state
-      SYSTEM_DOMAIN: cf.gcp-dev01.gcp.bndl.sapcloud.io
+      SYSTEM_DOMAIN: cfloadtest.bndl.sapcloud.io
       CREDHUB_ENV_NAME: bosh-cats
 
 - name: run-smokes-errand
