@@ -238,14 +238,14 @@ jobs:
       DEPLOYMENT_NAME: cf-smoke-tests
       ERRAND_NAME: smoke_tests
 
-  - task: run-smokes-windows
-    file: cf-deployment-concourse-tasks/run-errand/task.yml
-    input_mapping:
-      bbl-state: relint-envs
-    params:
-      BBL_STATE_DIR: bbl-state
-      DEPLOYMENT_NAME: cf-smoke-tests
-      ERRAND_NAME: smoke_tests_windows
+  # - task: run-smokes-windows
+  #   file: cf-deployment-concourse-tasks/run-errand/task.yml
+  #   input_mapping:
+  #     bbl-state: relint-envs
+  #   params:
+  #     BBL_STATE_DIR: bbl-state
+  #     DEPLOYMENT_NAME: cf-smoke-tests
+  #     ERRAND_NAME: smoke_tests_windows
 
 - name: delete-smokes-deployment
   serial_groups:
