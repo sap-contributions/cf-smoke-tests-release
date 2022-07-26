@@ -182,6 +182,39 @@ jobs:
           options:
             access_key_id: ((aws_access_key_id))
             secret_access_key: ((aws_secret_access_key))
+  - task: bump-release-files
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: bash
+      inputs:
+      - name: cf-smoke-tests-release-updated
+      run:
+        path: sh
+        args:
+        - -ec
+        - |
+          cf_smoke_tests_release_dir="$(pwd)/cf-smoke-tests-release"
+          files='
+          "${cf_smoke_tests_release_dir}/jobs/*"
+          "${cf_smoke_tests_release_dir}/packages/smoke_tests/*"
+          "${cf_smoke_tests_release_dir}/packages/smoke_tests_windows/*"
+          '
+          for file in $files; do
+            sed -i -E 's/golang-1.[0-9]+-(windows|linux)/golang-((.:go_version))-\1/g' "$file"
+          done
+          if [[ $(git -C "$cf_smoke_tests_release_dir" status --porcelain) ]]; then
+            git -C "$cf_smoke_tests_release_dir" status
+            git config --global user.email "$GIT_USER_EMAIL"
+            git config --global user.name "$GIT_USER_NAME"
+            git -C "$cf_smoke_tests_release_dir" add "${cf_smoke_tests_release_dir}/config/blobs.yml"
+            git -C "$cf_smoke_tests_release_dir" commit -m "Update cf cli to ${cf_cli_new}"
+          fi
+          cp -r "${cf_smoke_tests_release_dir}/." ./cf-smoke-tests-release-updated/
+      outputs:
+      - name: cf-smoke-tests-release-updated
   - put: cf-smoke-tests-release
     params:
       repository: cf-smoke-tests-release-updated
