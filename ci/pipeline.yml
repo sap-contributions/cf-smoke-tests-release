@@ -172,7 +172,7 @@ jobs:
     input_mapping:
       input_repo: cf-smoke-tests-release
     output_mapping:
-      output_repo: cf-smoke-tests-release-updated
+      output_repo: cf-smoke-tests-release
     params:
       PACKAGES: [golang-((.:go_version))-linux, golang-((.:go_version))-windows]
       PRIVATE_YML: |
@@ -188,29 +188,32 @@ jobs:
       image_resource:
         type: registry-image
         source:
-          repository: bash
+          repository: cloudfoundry/relint-base
       inputs:
-      - name: cf-smoke-tests-release-updated
+      - name: cf-smoke-tests-release
+      params:
+        GIT_USER_NAME: CI Bot
+        GIT_USER_EMAIL: bots@cloudfoundry.org
       run:
-        path: sh
+        path: bash
         args:
         - -ec
         - |
           cf_smoke_tests_release_dir="$(pwd)/cf-smoke-tests-release"
-          files='
-          "${cf_smoke_tests_release_dir}/jobs/*"
-          "${cf_smoke_tests_release_dir}/packages/smoke_tests/*"
-          "${cf_smoke_tests_release_dir}/packages/smoke_tests_windows/*"
-          '
-          for file in $files; do
-            sed -i -E 's/golang-1.[0-9]+-(windows|linux)/golang-((.:go_version))-\1/g' "$file"
+          dirs="
+          ${cf_smoke_tests_release_dir}/jobs
+          ${cf_smoke_tests_release_dir}/packages/smoke_tests
+          ${cf_smoke_tests_release_dir}/packages/smoke_tests_windows
+          "
+          for dir in $dirs; do
+            find "$dir" -type f -exec sed -i -E 's/golang-1.[0-9]+-(windows|linux)/golang-((.:go_version))-\1/g' {} \;
           done
           if [[ $(git -C "$cf_smoke_tests_release_dir" status --porcelain) ]]; then
             git -C "$cf_smoke_tests_release_dir" status
             git config --global user.email "$GIT_USER_EMAIL"
             git config --global user.name "$GIT_USER_NAME"
-            git -C "$cf_smoke_tests_release_dir" add "${cf_smoke_tests_release_dir}/config/blobs.yml"
-            git -C "$cf_smoke_tests_release_dir" commit -m "Update cf cli to ${cf_cli_new}"
+            git -C "$cf_smoke_tests_release_dir" add "$cf_smoke_tests_release_dir"
+            git -C "$cf_smoke_tests_release_dir" commit -m "Consume go ((.:go_version)) in jobs and smoke test packages"
           fi
           cp -r "${cf_smoke_tests_release_dir}/." ./cf-smoke-tests-release-updated/
       outputs:
