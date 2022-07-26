@@ -289,6 +289,8 @@ builds:
     version: 40.0.30
   b49d528b-72ff-47a0-5280-01c505426374:
     version: 40.0.84
+  b68bac90-827f-4f3d-59a2-e7789b15a7b5:
+    version: 42.0.8
   b7a28c3b-1eac-42b4-4776-fe88b474bd17:
     version: "13"
   bc5c76c0-471c-4072-4cbc-bcd214bc4c90:
