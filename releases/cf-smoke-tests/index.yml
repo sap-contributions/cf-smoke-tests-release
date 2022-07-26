@@ -323,6 +323,8 @@ builds:
     version: "7"
   d8ee22f8-adca-4216-6ad9-f5c67f00cc85:
     version: 40.0.71
+  d968622c-6f9a-44d7-5fc1-df11ced8042b:
+    version: 42.0.7
   da4897e2-ee0d-481d-5f98-01040663aba6:
     version: "12"
   db173e7a-b471-4b08-782b-4f04b14b5f96:
